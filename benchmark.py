@@ -40,6 +40,9 @@ env = gym.make(args.env_name)
 env = RGBImgPartialObsWrapper(env)
 env = ImgObsWrapper(env)
 
+# Environment must be reset before first step() call (order-enforcing)
+env.reset()
+
 # Benchmark rendering
 t0 = time.time()
 for i in range(args.num_frames):
