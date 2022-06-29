@@ -102,17 +102,6 @@ The environment being run can be selected with the `--env` option, eg:
 ./manual_control.py --env MiniGrid-Empty-8x8-v0
 ```
 
-## Reinforcement Learning
-
-If you want to train an agent with reinforcement learning, I recommend using the code found in the [torch-rl](https://github.com/lcswillems/torch-rl) repository. This code has been tested and is known to work with this environment. The default hyper-parameters are also known to converge.
-
-A sample training command is:
-
-```
-cd torch-rl
-python3 -m scripts.train --env MiniGrid-Empty-8x8-v0 --algo ppo
-```
-
 ## Wrappers
 
 MiniGrid is built to support tasks involving natural language and sparse rewards.
@@ -173,6 +162,10 @@ You can define your own reward function by creating a class derived
 from `MiniGridEnv`. Extending the environment with new object types or new actions
 should be very easy. If you wish to do this, you should take a look at the
 [gym_minigrid/minigrid.py](gym_minigrid/minigrid.py) source file.
+
+## Contributions by Tilio Schulze
+
+- [ ] Mark explicitly which files have been modified & why
 
 ## Included Environments
 
