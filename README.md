@@ -167,6 +167,11 @@ should be very easy. If you wish to do this, you should take a look at the
 
 - [ ] Mark explicitly which files have been modified & why
 
+
+Added files:
+`configurations.py`
+`gym_minigrid.envs.risky.py`
+
 ## Included Environments
 
 The environments listed below are implemented in the [gym_minigrid/envs](/gym_minigrid/envs) directory.

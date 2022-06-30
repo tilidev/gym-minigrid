@@ -47,6 +47,7 @@ def key_handler(event):
         reset()
         return
 
+    # TODO check here if Risky environment is used!
     if event.key == 'left':
         step(env.actions.left)
         return
