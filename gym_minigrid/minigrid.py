@@ -17,7 +17,8 @@ COLORS = {
     'blue'  : np.array([0, 0, 255]),
     'purple': np.array([112, 39, 195]),
     'yellow': np.array([255, 255, 0]),
-    'grey'  : np.array([100, 100, 100])
+    'grey'  : np.array([100, 100, 100]),
+    'light_grey' : np.array([200, 180, 180])
 }
 
 COLOR_NAMES = sorted(list(COLORS.keys()))
@@ -29,7 +30,8 @@ COLOR_TO_IDX = {
     'blue'  : 2,
     'purple': 3,
     'yellow': 4,
-    'grey'  : 5
+    'grey'  : 5,
+    'light_grey' : 6
 }
 
 IDX_TO_COLOR = dict(zip(COLOR_TO_IDX.values(), COLOR_TO_IDX.keys()))
@@ -47,6 +49,7 @@ OBJECT_TO_IDX = {
     'goal'          : 8,
     'lava'          : 9,
     'agent'         : 10,
+    'spiky_floor'   : 11,
 }
 
 IDX_TO_OBJECT = dict(zip(OBJECT_TO_IDX.values(), OBJECT_TO_IDX.keys()))
@@ -142,6 +145,9 @@ class WorldObj:
             v = Goal()
         elif obj_type == 'lava':
             v = Lava()
+        elif obj_type == "spiky_floor":
+            pass # TODO implement spiky floor decode
+            v = SpikyTile()
         else:
             assert False, "unknown object type in decode '%s'" % obj_type
 
@@ -326,6 +332,22 @@ class Box(WorldObj):
         env.grid.set(*pos, self.contains)
         return True
 
+# Additional WorldObjects
+
+class SpikyTile(WorldObj):
+    def __init__(self,):
+        super().__init__("spiky_floor", "light_grey")
+    
+    def can_overlap(self):
+        return True
+    
+    def render(self, img):
+        c = COLORS[self.color]
+
+        # 4 little spikes in tile
+        # TODO render this
+        raise NotImplementedError()
+        
 class Grid:
     """
     Represent a grid and operations on it
@@ -769,6 +791,7 @@ class MiniGridEnv(gym.Env):
             'box'           : 'B',
             'goal'          : 'G',
             'lava'          : 'V',
+            'spiky_floor'   : 'Z'
         }
 
         # Short string for opened door

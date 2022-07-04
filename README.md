@@ -167,9 +167,14 @@ should be very easy. If you wish to do this, you should take a look at the
 
 - [ ] Mark explicitly which files have been modified & why
 
+Modified Files:
+
+`minigrid.py`, changed color and object dictionaries, added SpikyTile Worldobject
 
 Added files:
+
 `configurations.py`
+
 `gym_minigrid.envs.risky.py`
 
 ## Included Environments
