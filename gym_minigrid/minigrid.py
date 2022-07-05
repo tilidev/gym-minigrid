@@ -344,9 +344,9 @@ class SpikyTile(WorldObj):
     def render(self, img):
         c = COLORS[self.color]
 
-        # 4 little spikes in tile
-        # TODO render this
-        raise NotImplementedError()
+        # draw two little spikes
+        fill_coords(img, point_in_triangle((0.2, 0.5), (0.4, 0.5), (0.3, 0.1)), c)
+        fill_coords(img, point_in_triangle((0.6, 0.9), (0.8, 0.9), (0.7, 0.5)), c)
         
 class Grid:
     """

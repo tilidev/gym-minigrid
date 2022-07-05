@@ -119,8 +119,10 @@ class RiskyPathEnv(MiniGridEnv):
         # Basic sanity checks
         assert width >= 6 and height >= 6
         assert reward_spec.keys() == RiskyPathEnv.DEFAULT_REWARDS.keys()
-        assert reward_spec["absorbing_states"] \
-            and reward_spec["absorbing_state_reward"]
+        if reward_spec["absorbing_states"]:
+            assert reward_spec["absorbing_state_reward"]
+        else:
+            assert not reward_spec["absorbing_state_reward"]
         assert slip_proba >= 0 and slip_proba < 1, "Must be a probability"
         assert type(agent_start_pos) is tuple, "Must be a x-y-tuple"
         start_x, start_y = agent_start_pos
@@ -134,9 +136,9 @@ class RiskyPathEnv(MiniGridEnv):
             temp_lava_positions = []
             for y in range(1, height - 1):
                 temp_lava_positions.append((1, y))
-            for y in range(height - 2, height - 7, -1):
+            for y in range(height - 3, height - 8, -1):
                 temp_lava_positions.append((3, y))
-            temp_lava_positions.append((5, 6), (5, 7))
+            temp_lava_positions.extend([(6, height - 5), (6, height - 6)])
         else:
             temp_lava_positions = lava_positions
 
@@ -147,8 +149,8 @@ class RiskyPathEnv(MiniGridEnv):
             # generate default spiky positions relative to bottom left corner
             # (goal is ignored due to order of tile placement)
             temp_spiky_positions = []
-            for y in range(1, height - 1):
-                temp_spiky_positions.append((1, y))
+            for y in range(1, height - 2):
+                temp_spiky_positions.append((2, y))
         else:
             temp_spiky_positions = spiky_positions
 
@@ -196,12 +198,15 @@ class RiskyPathEnv(MiniGridEnv):
         self.agent_pos = self.agent_start_pos
         self.agent_dir = 3
 
+        # assign the textual mission string (expected by MiniGrid)
+        self.mission = "Get to the green Goal tile"
 
-    def step(self, action):
-        """Overrides MiniGridEnv.step() as MiniGridEnv logic is not sufficient
-        for the environment I want (Non-directional agent,
-        non-sparse reward option)."""
-        pass
+
+    #def step(self, action):
+    #    """Overrides MiniGridEnv.step() as MiniGridEnv logic is not sufficient
+    #    for the environment I want (Non-directional agent,
+    #    non-sparse reward option)."""
+    #    pass
 
 
 
@@ -211,8 +216,16 @@ class RiskyPathV0(MiniGridRiskyPathEnv):
     def __init__(self):
         super().__init__()
 
-
 register(
     id='MiniGrid-RiskyPath-v0',
     entry_point='gym_minigrid.envs:RiskyPathV0'
+)
+
+class RiskyPathV1(RiskyPathEnv):
+    def __init__(self):
+        super().__init__()
+
+register(
+    id="MiniGrid-RiskyPath-v1",
+    entry_point='gym_minigrid.envs:RiskyPathV1'
 )
