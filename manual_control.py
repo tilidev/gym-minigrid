@@ -120,7 +120,7 @@ args = parser.parse_args()
 
 env = gym.make(args.env)
 
-is_RiskyPathEnv = True if args.env == "MiniGrid-RiskyPath-v1" else False
+is_RiskyPathEnv = True if "RiskyPath" in args.env else False
 
 if args.agent_view:
     env = RGBImgPartialObsWrapper(env)

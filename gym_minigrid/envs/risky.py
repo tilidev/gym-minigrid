@@ -106,6 +106,7 @@ class RiskyPathEnv(MiniGridEnv):
         self,
         width=11,
         height=11,
+        show_agent_dir=True,
         agent_start_pos=(2,9),
         goal_positions=[(1,3)],
         lava_positions=None,
@@ -163,6 +164,7 @@ class RiskyPathEnv(MiniGridEnv):
         self.lava_positions = temp_lava_positions
         self.spiky_positions = temp_spiky_positions
         self.new_actions = RiskyPathEnv.Actions
+        self.show_agent_dir = show_agent_dir
 
         # Call superclass initialisation
         # As the super __init__() is called, the action_space is set
@@ -181,6 +183,8 @@ class RiskyPathEnv(MiniGridEnv):
         set tile on a position will always be placed."""
         # create an empty grid
         self.grid = Grid(width, height)
+        if not self.show_agent_dir:
+            Grid.set_show_agent_dir(False)
 
         # place the surrounding walls
         self.grid.wall_rect(0, 0, width, height)
@@ -275,4 +279,14 @@ class RiskyPathV1(RiskyPathEnv):
 register(
     id="MiniGrid-RiskyPath-v1",
     entry_point='gym_minigrid.envs:RiskyPathV1'
+)
+
+# Default environment specification without agent directionality
+class RiskyPathV2(RiskyPathEnv):
+    def __init__(self):
+        super().__init__(show_agent_dir=False)
+
+register(
+    id="MiniGrid-RiskyPath-v2",
+    entry_point='gym_minigrid.envs:RiskyPathV2'
 )

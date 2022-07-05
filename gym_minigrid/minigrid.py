@@ -356,6 +356,9 @@ class Grid:
     # Static cache of pre-renderer tiles
     tile_cache = {}
 
+    # Class attribute, defines if the rendered agent shows its direction
+    show_agent_dir = True
+
     def __init__(self, width, height):
         assert width >= 3
         assert height >= 3
@@ -364,6 +367,10 @@ class Grid:
         self.height = height
 
         self.grid = [None] * width * height
+
+    @classmethod
+    def set_show_agent_dir(cls, val: bool):
+        cls.show_agent_dir = val
 
     def __contains__(self, key):
         if isinstance(key, WorldObj):
@@ -486,7 +493,7 @@ class Grid:
             obj.render(img)
 
         # Overlay the agent on top
-        if agent_dir is not None:
+        if agent_dir is not None and cls.show_agent_dir:
             tri_fn = point_in_triangle(
                 (0.12, 0.19),
                 (0.87, 0.50),
@@ -496,6 +503,8 @@ class Grid:
             # Rotate the agent based on its direction
             tri_fn = rotate_fn(tri_fn, cx=0.5, cy=0.5, theta=0.5*math.pi*agent_dir)
             fill_coords(img, tri_fn, (255, 0, 0))
+        elif agent_dir is not None:
+            fill_coords(img, point_in_rect(0.12, 0.9, 0.12, 0.9), (255, 0, 0))
 
         # Highlight the cell if needed
         if highlight:
