@@ -5,8 +5,11 @@ import argparse
 import numpy as np
 import gym
 import gym_minigrid
+from gym_minigrid.envs.risky import RiskyPathEnv
 from gym_minigrid.wrappers import *
 from gym_minigrid.window import Window
+
+is_RiskyPathEnv = False
 
 def redraw(img):
     if not args.agent_view:
@@ -47,16 +50,31 @@ def key_handler(event):
         reset()
         return
 
-    # TODO check here if Risky environment is used!
     if event.key == 'left':
+        if is_RiskyPathEnv:
+            action = env.new_actions.west
+            step(action)
+            return
         step(env.actions.left)
         return
     if event.key == 'right':
+        if is_RiskyPathEnv:
+            action = env.new_actions.east
+            step(action)
+            return
         step(env.actions.right)
         return
     if event.key == 'up':
+        if is_RiskyPathEnv:
+            action = env.new_actions.north
+            step(action)
+            return
         step(env.actions.forward)
         return
+    if event.key == 'down':
+        if is_RiskyPathEnv:
+            step(env.new_actions.south)
+            return
 
     # Spacebar
     if event.key == ' ':
@@ -101,6 +119,8 @@ parser.add_argument(
 args = parser.parse_args()
 
 env = gym.make(args.env)
+
+is_RiskyPathEnv = True if args.env == "MiniGrid-RiskyPath-v1" else False
 
 if args.agent_view:
     env = RGBImgPartialObsWrapper(env)

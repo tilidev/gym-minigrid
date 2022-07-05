@@ -82,19 +82,18 @@ class MiniGridRiskyPathEnv(MiniGridEnv):
 # ----------------------------------------
 # Rewrite of some major aspects of Gym-Minigrid for correect env specification
 
+DEFAULT_REWARDS = {
+    "step_penalty" : 0,
+    "goal_reward" : 1,
+    "absorbing_states" : False,
+    "absorbing_state_reward" : 0, # TODO only active if absorbing explicitly True
+    "risky_tile_reward" : 0
+}
 
 class RiskyPathEnv(MiniGridEnv):
     """
     Single-room square grid environment with holes (/lava) and slipping factor
     """
-
-    DEFAULT_REWARDS = {
-        "step_penalty" : 0,
-        "goal_reward" : 1,
-        "absorbing_states" : False,
-        "absorbing_state_reward" : 0, # TODO only active if absorbing explicitly True
-        "risky_tile_reward" : 0
-    }
 
     # Only actions needed are Move {west, north, east, south}
     class Actions(IntEnum):
@@ -118,7 +117,7 @@ class RiskyPathEnv(MiniGridEnv):
     ):
         # Basic sanity checks
         assert width >= 6 and height >= 6
-        assert reward_spec.keys() == RiskyPathEnv.DEFAULT_REWARDS.keys()
+        assert reward_spec.keys() == DEFAULT_REWARDS.keys()
         if reward_spec["absorbing_states"]:
             assert reward_spec["absorbing_state_reward"]
         else:
@@ -154,7 +153,9 @@ class RiskyPathEnv(MiniGridEnv):
         else:
             temp_spiky_positions = spiky_positions
 
-        # Define instance variables not contained in MiniGridEnv
+        # Define instance variables not yet contained in MiniGridEnv
+        # These variables don't need to be reset when resetting the env
+        # The default MiniGridEnv.reset() can thus be used
         self.agent_start_pos = agent_start_pos
         self.slip_proba = slip_proba
         self.reward_spec = reward_spec
@@ -164,6 +165,9 @@ class RiskyPathEnv(MiniGridEnv):
         self.new_actions = RiskyPathEnv.Actions
 
         # Call superclass initialisation
+        # As the super __init__() is called, the action_space is set
+        # to the default MiniGridEnv action space.
+        # TODO find a way to change that behavior
         super().__init__(
             width=width,
             height=height,
@@ -201,12 +205,54 @@ class RiskyPathEnv(MiniGridEnv):
         # assign the textual mission string (expected by MiniGrid)
         self.mission = "Get to the green Goal tile"
 
+    def step(self, action):
+        """Overrides MiniGridEnv.step() as MiniGridEnv logic is not sufficient
+        for this environment (Non-directional agent,
+        non-sparse reward option). Under the hood, this method first changes
+        the orientation of the agent similar to MiniGridEnv, except that the
+        time step is not finished afterwards. The agent will move forward in
+        the new direction if this is possible. The collisions with objects
+        is still specified as in the default MiniGridEnv implementation."""
 
-    #def step(self, action):
-    #    """Overrides MiniGridEnv.step() as MiniGridEnv logic is not sufficient
-    #    for the environment I want (Non-directional agent,
-    #    non-sparse reward option)."""
-    #    pass
+        self.step_count += 1
+        reward = 0
+        done = False
+
+        # choose new agent direction according to minigrid.DIR_TO_VEC
+        if action == self.new_actions.west:
+            self.agent_dir = 2
+        elif action == self.new_actions.north:
+            self.agent_dir = 3
+        elif action == self.new_actions.east:
+            self.agent_dir = 0
+        elif action == self.new_actions.south:
+            self.agent_dir = 1
+        else:
+            assert False, "Unknown action."
+
+        # Get the contents of the cell in front of the agent
+        fwd_pos = self.front_pos
+        fwd_cell = self.grid.get(*fwd_pos)
+        
+        # move one step
+        if fwd_cell == None or fwd_cell.can_overlap():
+            self.agent_pos = fwd_pos
+        if fwd_cell != None and fwd_cell.type == 'goal':
+            done = True
+            # TODO make dependent on terminal or absorbing states
+            reward = self._reward()
+        if fwd_cell != None and fwd_cell.type == 'lava':
+            done = True
+            # TODO make dependent on terminal or absorbing states
+
+        # finish the step
+        if self.step_count >= self.max_steps:
+            done = True
+
+        # return observations
+        obs = self.gen_obs() # TODO change this and the observation Space
+
+        return obs, reward, done, {} # TODO change information
 
 
 
@@ -221,6 +267,7 @@ register(
     entry_point='gym_minigrid.envs:RiskyPathV0'
 )
 
+# Default environment specification
 class RiskyPathV1(RiskyPathEnv):
     def __init__(self):
         super().__init__()
