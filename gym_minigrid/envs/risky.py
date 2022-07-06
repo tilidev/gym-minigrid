@@ -1,6 +1,8 @@
 from gym_minigrid.minigrid import *
 from gym_minigrid.register import register
 
+# Test Environment with basic functionality (Not relevant for thesis)
+# TODO remove later if not used
 class MiniGridRiskyPathEnv(MiniGridEnv):
     """
     Single-room square grid environment with holes (/lava) and slipping factor
@@ -176,7 +178,8 @@ class RiskyPathEnv(MiniGridEnv):
         # Call superclass initialisation
         # As the super __init__() is called, the action_space is set
         # to the default MiniGridEnv action space.
-        # TODO find a way to change that behavior
+        # A workaround to this is to reset the action space in the gen_grid
+        # method
         super().__init__(
             width=width,
             height=height,
@@ -281,8 +284,16 @@ class RiskyPathEnv(MiniGridEnv):
         if self.step_count >= self.max_steps:
             done = True
 
-        # return observations
-        obs = self.gen_obs() # TODO change this and the observation Space
+        # return observations as images
+        # only a temporary solution! This does not conform to the env obs spec
+        # TODO Adapt observation_space or observation without breaking other code
+        # img_obs = self.grid.render(
+        #     16,
+        #     self.agent_pos,
+        #     self.agent_dir
+        # )
+
+        obs = self.gen_obs()
 
         return obs, reward, done, {} # TODO change information
 
@@ -317,4 +328,22 @@ class RiskyPathV2(RiskyPathEnv):
 register(
     id="MiniGrid-RiskyPath-v2",
     entry_point='gym_minigrid.envs:RiskyPathV2'
+)
+
+# spiky penality activated with -0.1
+rs = {
+        STEP_PENALTY : 0,
+        GOAL_REWARD : 1,
+        ABSORBING_STATES : False,
+        ABSORBING_REWARD_GOAL : 0,
+        RISKY_TILE_REWARD : -0.1,
+        LAVA_REWARD : -1
+}
+class RiskyPathV3(RiskyPathEnv):
+    def __init__(self):
+        super().__init__(show_agent_dir=False, reward_spec=rs)
+
+register(
+    id="MiniGrid-RiskyPath-v3",
+    entry_point='gym_minigrid.envs:RiskyPathV3'
 )
