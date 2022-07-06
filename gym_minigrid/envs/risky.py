@@ -82,12 +82,23 @@ class MiniGridRiskyPathEnv(MiniGridEnv):
 # ----------------------------------------
 # Rewrite of some major aspects of Gym-Minigrid for correect env specification
 
+# String Constants for reward specification
+STEP_PENALTY = "step_penalty"
+GOAL_REWARD = "goal_reward"
+ABSORBING_STATES = "absorbing_states"
+ABSORBING_REWARD_GOAL = "absorbing_reward_goal"
+ABSORBING_REWARD_LAVA = "absorbing_reward_lava"
+RISKY_TILE_REWARD = "risky_tile_reward"
+LAVA_REWARD = "lava_reward"
+
+# Reward specification Dictionary will be passed to the environment
 DEFAULT_REWARDS = {
-    "step_penalty" : 0,
-    "goal_reward" : 1,
-    "absorbing_states" : False,
-    "absorbing_state_reward" : 0, # TODO only active if absorbing explicitly True
-    "risky_tile_reward" : 0
+    STEP_PENALTY : 0,
+    GOAL_REWARD : 1,
+    ABSORBING_STATES : False,
+    ABSORBING_REWARD_GOAL : 0,
+    RISKY_TILE_REWARD : 0,
+    LAVA_REWARD : -1
 }
 
 class RiskyPathEnv(MiniGridEnv):
@@ -119,10 +130,6 @@ class RiskyPathEnv(MiniGridEnv):
         # Basic sanity checks
         assert width >= 6 and height >= 6
         assert reward_spec.keys() == DEFAULT_REWARDS.keys()
-        if reward_spec["absorbing_states"]:
-            assert reward_spec["absorbing_state_reward"]
-        else:
-            assert not reward_spec["absorbing_state_reward"]
         assert slip_proba >= 0 and slip_proba < 1, "Must be a probability"
         assert type(agent_start_pos) is tuple, "Must be a x-y-tuple"
         start_x, start_y = agent_start_pos
@@ -181,6 +188,10 @@ class RiskyPathEnv(MiniGridEnv):
         """Overrides MiniGridEnv._gen_grid(). Must be implemented in each
         subclass. Order of tile creation matters, which means the last
         set tile on a position will always be placed."""
+        # TODO change action space and corresponding world aspects here
+        # TODO MARK that this is a workaround!!
+        # TODO Check whether or not this affects other parts of the code
+
         # create an empty grid
         self.grid = Grid(width, height)
         if not self.show_agent_dir:
@@ -219,7 +230,7 @@ class RiskyPathEnv(MiniGridEnv):
         is still specified as in the default MiniGridEnv implementation."""
 
         self.step_count += 1
-        reward = 0
+        reward = self.reward_spec[STEP_PENALTY]
         done = False
 
         # choose new agent direction according to minigrid.DIR_TO_VEC
@@ -238,16 +249,23 @@ class RiskyPathEnv(MiniGridEnv):
         fwd_pos = self.front_pos
         fwd_cell = self.grid.get(*fwd_pos)
         
-        # move one step
+        # move one step and get the reward
         if fwd_cell == None or fwd_cell.can_overlap():
             self.agent_pos = fwd_pos
         if fwd_cell != None and fwd_cell.type == 'goal':
-            done = True
-            # TODO make dependent on terminal or absorbing states
-            reward = self._reward()
+            if self.reward_spec[ABSORBING_STATES]:
+                reward += self.reward_spec[ABSORBING_REWARD_GOAL]
+            else:
+                done = True
+                reward += self.reward_spec[GOAL_REWARD]
         if fwd_cell != None and fwd_cell.type == 'lava':
-            done = True
-            # TODO make dependent on terminal or absorbing states
+            if self.reward_spec[ABSORBING_STATES]:
+                reward += self.reward_spec[ABSORBING_REWARD_LAVA]
+            else:
+                done = True
+                reward += self.reward_spec[LAVA_REWARD]
+        if fwd_cell != None and fwd_cell.type == 'spiky_floor':
+            reward += self.reward_spec[RISKY_TILE_REWARD]
 
         # finish the step
         if self.step_count >= self.max_steps:
