@@ -187,10 +187,20 @@ class RiskyPathEnv(MiniGridEnv):
     def _gen_grid(self, width, height):
         """Overrides MiniGridEnv._gen_grid(). Must be implemented in each
         subclass. Order of tile creation matters, which means the last
-        set tile on a position will always be placed."""
-        # TODO change action space and corresponding world aspects here
-        # TODO MARK that this is a workaround!!
+        set tile on a position will always be placed.
+        
+        Additional details:
+        The environments action_space is set in this method instead of the 
+        __init__ method. This is due to the fact that the MiniGridEnv.__init__
+        method is called as a last step in RiskyPathEnv.__init__ and the action
+        space is set to have 7 distinct actions. As this does not conform to my
+        environment specification (only 4 distinct actions), this workaround is
+        used."""
+        # Workaround for correctly specifying the action_space attribute
         # TODO Check whether or not this affects other parts of the code
+        self.action_space = spaces.Discrete(len(RiskyPathEnv.Actions))
+
+        # TODO Check whether or not it is possible to easily change the observation space
 
         # create an empty grid
         self.grid = Grid(width, height)

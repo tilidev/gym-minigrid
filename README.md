@@ -1,3 +1,25 @@
+# Forked MiniGrid - Tilio Schulze
+
+Welcome to my fork of the MiniGrid framework. In the course of my Bachelor's thesis at KIT (*Empirically Evaluating Reinforcement Learning Agents on a Family of Gridworlds of Varying Complexity*), we decided
+to use MiniGrid as a basis for creating the Gridworld environment we had in mind.
+
+This section provides information about the changes and additions made to the original project.
+The original README can be found below.
+
+- [ ] Reset the original README below to the state it was in when the project was forked
+
+## Quick Start
+
+- [ ] add information to simplify using this projects
+
+## New environment - RiskyPathEnv (`risky.py`)
+
+- [ ] add information about the environment added in this fork
+
+## Additional information
+
+- [ ] add information about which files have been changed in the project and why
+
 # Minimalistic Gridworld Environment (MiniGrid)
 
 [![Build Status](https://travis-ci.org/maximecb/gym-minigrid.svg?branch=master)](https://travis-ci.org/maximecb/gym-minigrid)
@@ -162,20 +184,6 @@ You can define your own reward function by creating a class derived
 from `MiniGridEnv`. Extending the environment with new object types or new actions
 should be very easy. If you wish to do this, you should take a look at the
 [gym_minigrid/minigrid.py](gym_minigrid/minigrid.py) source file.
-
-## Contributions by Tilio Schulze
-
-- [ ] Mark explicitly which files have been modified & why
-
-Modified Files:
-
-`minigrid.py`, changed color and object dictionaries, added SpikyTile Worldobject
-
-Added files:
-
-`configurations.py`
-
-`gym_minigrid.envs.risky.py`
 
 ## Included Environments
 
