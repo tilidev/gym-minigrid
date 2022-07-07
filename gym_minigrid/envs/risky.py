@@ -297,6 +297,16 @@ class RiskyPathEnv(MiniGridEnv):
 
         return obs, reward, done, {} # TODO change information
 
+    def render(self, mode='human', close=False, highlight=False, tile_size=...):
+        """Override render method to not highlight cells by default.
+        Highlighted cells might confuse users as they suggest that the agent
+        does not have full observability over the environment."""
+        return super().render(
+            mode=mode,
+            close=close,
+            highlight=highlight,
+            tile_size=tile_size
+        )
 
 
 # -------* Registration *-------

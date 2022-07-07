@@ -35,6 +35,9 @@ def step(action):
 
     if done:
         print('done!')
+        print('Resetting environment.')
+        redraw(obs)
+        time.sleep(0.2)
         reset()
     else:
         redraw(obs)
