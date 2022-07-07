@@ -262,19 +262,20 @@ class RiskyPathEnv(MiniGridEnv):
 
         # Get the contents of the cell in front of the agent
         fwd_pos = self.front_pos
-        fwd_cell = self.grid.get(*fwd_pos)
+        next_cell = self.grid.get(*fwd_pos)
 
         # check if the agent slips in this step
         if self.slip_proba > 0:
+            # TODO make sure that slipping will not break wall rebound!
             pass
         
         # move one step and get the reward
-        if fwd_cell == None or fwd_cell.can_overlap():
+
+        if next_cell == None or next_cell.can_overlap():
             self.agent_pos = fwd_pos
         elif self.wall_rebound:
             # rebound if fwd_cell is not None and cannot overlap
             # (currently: walls, closed doors, key, ball, box)
-            # TODO test correct agent direction and position afterwards
             # TODO check what happens if agent is surrounded -> should stay in same place
 
             # rebound can happen behind agent pos/dir or on the sides
@@ -301,21 +302,24 @@ class RiskyPathEnv(MiniGridEnv):
             if len(rebound_options) > 0:
                 index = self.np_random.choice(len(rebound_options))
                 self.agent_pos = rebound_options[index]
-                print(self.agent_pos)
 
-        if fwd_cell != None and fwd_cell.type == 'goal':
+                # make sure to still check for collisions
+                next_cell = self.grid.get(*self.agent_pos)
+                # TODO check if this leads to new bugs
+
+        if next_cell != None and next_cell.type == 'goal':
             if self.reward_spec[ABSORBING_STATES]:
                 reward += self.reward_spec[ABSORBING_REWARD_GOAL]
             else:
                 done = True
                 reward += self.reward_spec[GOAL_REWARD]
-        if fwd_cell != None and fwd_cell.type == 'lava':
+        if next_cell != None and next_cell.type == 'lava':
             if self.reward_spec[ABSORBING_STATES]:
                 reward += self.reward_spec[ABSORBING_REWARD_LAVA]
             else:
                 done = True
                 reward += self.reward_spec[LAVA_REWARD]
-        if fwd_cell != None and fwd_cell.type == 'spiky_floor':
+        if next_cell != None and next_cell.type == 'spiky_floor':
             reward += self.reward_spec[RISKY_TILE_REWARD]
 
         # finish the step
