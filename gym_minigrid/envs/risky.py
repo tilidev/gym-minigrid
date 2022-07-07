@@ -126,6 +126,7 @@ class RiskyPathEnv(MiniGridEnv):
         spiky_positions=None,
         reward_spec=DEFAULT_REWARDS,
         slip_proba=0.,
+        wall_rebound=False,
         max_steps=150,
         seed=1337,
     ):
@@ -174,6 +175,7 @@ class RiskyPathEnv(MiniGridEnv):
         self.spiky_positions = temp_spiky_positions
         self.new_actions = RiskyPathEnv.Actions
         self.show_agent_dir = show_agent_dir
+        self.wall_rebound = wall_rebound
 
         # Call superclass initialisation
         # As the super __init__() is called, the action_space is set
@@ -261,10 +263,46 @@ class RiskyPathEnv(MiniGridEnv):
         # Get the contents of the cell in front of the agent
         fwd_pos = self.front_pos
         fwd_cell = self.grid.get(*fwd_pos)
+
+        # check if the agent slips in this step
+        if self.slip_proba > 0:
+            pass
         
         # move one step and get the reward
         if fwd_cell == None or fwd_cell.can_overlap():
             self.agent_pos = fwd_pos
+        elif self.wall_rebound:
+            # rebound if fwd_cell is not None and cannot overlap
+            # (currently: walls, closed doors, key, ball, box)
+            # TODO test correct agent direction and position afterwards
+            # TODO check what happens if agent is surrounded -> should stay in same place
+
+            # rebound can happen behind agent pos/dir or on the sides
+            tmp_rebound_candidates = []
+            current_pos = np.array(self.agent_pos)
+            current_dir = DIR_TO_VEC[self.agent_dir]
+            behind_pos = current_pos - current_dir
+            tmp_rebound_candidates.append(behind_pos)
+            # compute positions perpendicular to agent_dir
+            # and adjacent to agent_pos
+            side_dir = np.flip(current_dir, 0)
+            side_pos_1 = current_pos + side_dir
+            side_pos_2 = current_pos - side_dir
+            tmp_rebound_candidates.append(side_pos_1)
+            tmp_rebound_candidates.append(side_pos_2)
+
+            rebound_options = []
+            for cand in tmp_rebound_candidates:
+                cell = self.grid.get(*cand)
+                if cell is None or cell.can_overlap():
+                    rebound_options.append(cand)
+            
+            # choose from valid candidates or keep current position if empty
+            if len(rebound_options) > 0:
+                index = self.np_random.choice(len(rebound_options))
+                self.agent_pos = rebound_options[index]
+                print(self.agent_pos)
+
         if fwd_cell != None and fwd_cell.type == 'goal':
             if self.reward_spec[ABSORBING_STATES]:
                 reward += self.reward_spec[ABSORBING_REWARD_GOAL]
@@ -310,7 +348,7 @@ class RiskyPathEnv(MiniGridEnv):
 
 
 # -------* Registration *-------
-
+# ---- V0 ----
 class RiskyPathV0(MiniGridRiskyPathEnv):
     def __init__(self):
         super().__init__()
@@ -320,6 +358,7 @@ register(
     entry_point='gym_minigrid.envs:RiskyPathV0'
 )
 
+# ---- V1 ----
 # Default environment specification
 class RiskyPathV1(RiskyPathEnv):
     def __init__(self):
@@ -330,6 +369,7 @@ register(
     entry_point='gym_minigrid.envs:RiskyPathV1'
 )
 
+# ---- V2 ----
 # Default environment specification without agent directionality
 class RiskyPathV2(RiskyPathEnv):
     def __init__(self):
@@ -340,6 +380,7 @@ register(
     entry_point='gym_minigrid.envs:RiskyPathV2'
 )
 
+# ---- V3 ----
 # spiky penality activated with -0.1
 rs = {
         STEP_PENALTY : 0,
@@ -349,6 +390,7 @@ rs = {
         RISKY_TILE_REWARD : -0.1,
         LAVA_REWARD : -1
 }
+
 class RiskyPathV3(RiskyPathEnv):
     def __init__(self):
         super().__init__(show_agent_dir=False, reward_spec=rs)
@@ -356,4 +398,15 @@ class RiskyPathV3(RiskyPathEnv):
 register(
     id="MiniGrid-RiskyPath-v3",
     entry_point='gym_minigrid.envs:RiskyPathV3'
+)
+
+# ---- V4 ----
+# Wall rebound activated with agent directionality
+class RiskyPathV4(RiskyPathEnv):
+    def __init__(self):
+        super().__init__(show_agent_dir=True, wall_rebound=True)
+
+register(
+    id="MiniGrid-RiskyPath-v4",
+    entry_point='gym_minigrid.envs:RiskyPathV4'
 )
