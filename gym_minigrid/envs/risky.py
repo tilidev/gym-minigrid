@@ -99,6 +99,7 @@ DEFAULT_REWARDS = {
     GOAL_REWARD : 1,
     ABSORBING_STATES : False,
     ABSORBING_REWARD_GOAL : 0,
+    ABSORBING_REWARD_LAVA : -1,
     RISKY_TILE_REWARD : 0,
     LAVA_REWARD : -1
 }
@@ -249,71 +250,73 @@ class RiskyPathEnv(MiniGridEnv):
         reward = self.reward_spec[STEP_PENALTY]
         done = False
 
-        # choose new agent direction according to minigrid.DIR_TO_VEC
-        if action == self.new_actions.west:
-            self.agent_dir = 2
-        elif action == self.new_actions.north:
-            self.agent_dir = 3
-        elif action == self.new_actions.east:
-            self.agent_dir = 0
-        elif action == self.new_actions.south:
-            self.agent_dir = 1
-        else:
-            assert False, "Unknown action."
+        # Only apply movement logic if agent should be able to move
+        if self.can_move:
+            # choose new agent direction according to minigrid.DIR_TO_VEC
+            if action == self.new_actions.west:
+                self.agent_dir = 2
+            elif action == self.new_actions.north:
+                self.agent_dir = 3
+            elif action == self.new_actions.east:
+                self.agent_dir = 0
+            elif action == self.new_actions.south:
+                self.agent_dir = 1
+            else:
+                assert False, "Unknown action."
 
-        # Get the contents of the cell in front of the agent
-        fwd_pos = self.front_pos
-        next_cell = self.grid.get(*fwd_pos)
+            # Get the contents of the cell in front of the agent
+            fwd_pos = self.front_pos
+            next_cell = self.grid.get(*fwd_pos)
 
-        # check if the agent slips in this step
-        # check explicitly that slipping is allowed
-        if self.slip_proba > 0:
-            rnd_val = self.np_random.random()  
-            slip_now = rnd_val < self.slip_proba
-        else:
-            slip_now = False
+            # check if the agent slips in this step
+            # check explicitly that slipping is allowed
+            if self.slip_proba > 0:
+                rnd_val = self.np_random.random()  
+                slip_now = rnd_val < self.slip_proba
+            else:
+                slip_now = False
 
-        # move one step and get the reward
+            # move one step and get the reward
 
-        if (next_cell == None or next_cell.can_overlap()) and not slip_now:
-            self.agent_pos = fwd_pos
-        elif self.wall_rebound or slip_now:
-            # rebound/slip
-            # (currently: rebound on walls, closed doors, key, ball, box)
-            # rebound can happen behind agent pos/dir or on the sides
-            # slip can happen to either adjacent side
-            tmp_rebound_slip = []
-            current_pos = np.array(self.agent_pos)
-            current_dir = DIR_TO_VEC[self.agent_dir]
-            behind_pos = current_pos - current_dir
-            tmp_rebound_slip.append(behind_pos)
-            # compute positions perpendicular to agent_dir
-            # and adjacent to agent_pos
-            side_dir = np.flip(current_dir, 0)
-            side_pos_1 = current_pos + side_dir
-            side_pos_2 = current_pos - side_dir
-            tmp_rebound_slip.append(side_pos_1)
-            tmp_rebound_slip.append(side_pos_2)
-            # append position in front of the agent
-            tmp_rebound_slip.append(fwd_pos)
+            if (next_cell == None or next_cell.can_overlap()) and not slip_now:
+                self.agent_pos = fwd_pos
+            elif self.wall_rebound or slip_now:
+                # rebound/slip
+                # (currently: rebound on walls, closed doors, key, ball, box)
+                # rebound can happen behind agent pos/dir or on the sides
+                # slip can happen to either adjacent side
+                tmp_rebound_slip = []
+                current_pos = np.array(self.agent_pos)
+                current_dir = DIR_TO_VEC[self.agent_dir]
+                behind_pos = current_pos - current_dir
+                tmp_rebound_slip.append(behind_pos)
+                # compute positions perpendicular to agent_dir
+                # and adjacent to agent_pos
+                side_dir = np.flip(current_dir, 0)
+                side_pos_1 = current_pos + side_dir
+                side_pos_2 = current_pos - side_dir
+                tmp_rebound_slip.append(side_pos_1)
+                tmp_rebound_slip.append(side_pos_2)
+                # append position in front of the agent
+                tmp_rebound_slip.append(fwd_pos)
 
-            # get valid options for next cell
-            rebound_slip_options = []
-            for candidate in tmp_rebound_slip:
-                cell = self.grid.get(*candidate)
-                # make sure the agent can be on the cell
-                if cell is None or cell.can_overlap():
-                    rebound_slip_options.append(candidate)
-            
-            # choose from valid candidates or keep current position if empty
-            if len(rebound_slip_options) > 0:
-                index = self.np_random.choice(len(rebound_slip_options))
-                self.agent_pos = rebound_slip_options[index]
+                # get valid options for next cell
+                rebound_slip_options = []
+                for candidate in tmp_rebound_slip:
+                    cell = self.grid.get(*candidate)
+                    # make sure the agent can be on the cell
+                    if cell is None or cell.can_overlap():
+                        rebound_slip_options.append(candidate)
+                
+                # choose from valid candidates or keep current position if empty
+                if len(rebound_slip_options) > 0:
+                    index = self.np_random.choice(len(rebound_slip_options))
+                    self.agent_pos = rebound_slip_options[index]
 
-                # Reassign next cell to make sure to still check for collisions
-                next_cell = self.grid.get(*self.agent_pos)
-                # TODO check if this leads to new bugs
-
+        # reassign next cell to make sure to check for collisions & rewards
+        next_cell = self.grid.get(*self.agent_pos)
+        # TODO check if this leads to new bugs
+        
         # check for cells and corresponding rewards / episode end
         if next_cell != None and next_cell.type == 'goal':
             if self.reward_spec[ABSORBING_STATES]:
@@ -358,6 +361,13 @@ class RiskyPathEnv(MiniGridEnv):
             highlight=highlight,
             tile_size=tile_size
         )
+    
+    @property
+    def can_move(self):
+        """Make sure that the agent can move from its current position.
+        This is especially useful when absorbing states are activated."""
+        return self.grid.get(*self.agent_pos) is None \
+            or not self.grid.get(*self.agent_pos).type in ['goal', 'lava']
 
 
 # -------* Registration *-------
@@ -423,4 +433,25 @@ class RiskyPathV4(RiskyPathEnv):
 register(
     id="MiniGrid-RiskyPath-v4",
     entry_point='gym_minigrid.envs:RiskyPathV4'
+)
+
+# ---- V5 ----
+# absorbing final states
+rs = {
+        STEP_PENALTY : 0,
+        GOAL_REWARD : 1,
+        ABSORBING_STATES : True,
+        ABSORBING_REWARD_GOAL : 2,
+        ABSORBING_REWARD_LAVA: -2,
+        RISKY_TILE_REWARD : 0,
+        LAVA_REWARD : -1
+}
+
+class RiskyPathV5(RiskyPathEnv):
+    def __init__(self):
+        super().__init__(show_agent_dir=False, reward_spec=rs)
+
+register(
+    id="MiniGrid-RiskyPath-v5",
+    entry_point='gym_minigrid.envs:RiskyPathV5'
 )
