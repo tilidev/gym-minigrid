@@ -240,9 +240,10 @@ class RiskyPathEnv(MiniGridEnv):
         for this environment (Non-directional agent,
         non-sparse reward option). Under the hood, this method first changes
         the orientation of the agent similar to MiniGridEnv, except that the
-        time step is not finished afterwards. The agent will move forward in
-        the new direction if this is possible. The collisions with objects
-        is still specified as in the default MiniGridEnv implementation."""
+        time step is not finished directly afterwards. The agent will move
+        forward in the new direction if this is possible. The collisions with
+        objects is still specified as in the default MiniGridEnv
+        implementation."""
 
         self.step_count += 1
         reward = self.reward_spec[STEP_PENALTY]
@@ -265,48 +266,55 @@ class RiskyPathEnv(MiniGridEnv):
         next_cell = self.grid.get(*fwd_pos)
 
         # check if the agent slips in this step
+        # check explicitly that slipping is allowed
         if self.slip_proba > 0:
-            # TODO make sure that slipping will not break wall rebound!
-            pass
-        
+            rnd_val = self.np_random.random()  
+            slip_now = rnd_val < self.slip_proba
+        else:
+            slip_now = False
+
         # move one step and get the reward
 
-        if next_cell == None or next_cell.can_overlap():
+        if (next_cell == None or next_cell.can_overlap()) and not slip_now:
             self.agent_pos = fwd_pos
-        elif self.wall_rebound:
-            # rebound if fwd_cell is not None and cannot overlap
-            # (currently: walls, closed doors, key, ball, box)
-            # TODO check what happens if agent is surrounded -> should stay in same place
-
+        elif self.wall_rebound or slip_now:
+            # rebound/slip
+            # (currently: rebound on walls, closed doors, key, ball, box)
             # rebound can happen behind agent pos/dir or on the sides
-            tmp_rebound_candidates = []
+            # slip can happen to either adjacent side
+            tmp_rebound_slip = []
             current_pos = np.array(self.agent_pos)
             current_dir = DIR_TO_VEC[self.agent_dir]
             behind_pos = current_pos - current_dir
-            tmp_rebound_candidates.append(behind_pos)
+            tmp_rebound_slip.append(behind_pos)
             # compute positions perpendicular to agent_dir
             # and adjacent to agent_pos
             side_dir = np.flip(current_dir, 0)
             side_pos_1 = current_pos + side_dir
             side_pos_2 = current_pos - side_dir
-            tmp_rebound_candidates.append(side_pos_1)
-            tmp_rebound_candidates.append(side_pos_2)
+            tmp_rebound_slip.append(side_pos_1)
+            tmp_rebound_slip.append(side_pos_2)
+            # append position in front of the agent
+            tmp_rebound_slip.append(fwd_pos)
 
-            rebound_options = []
-            for cand in tmp_rebound_candidates:
-                cell = self.grid.get(*cand)
+            # get valid options for next cell
+            rebound_slip_options = []
+            for candidate in tmp_rebound_slip:
+                cell = self.grid.get(*candidate)
+                # make sure the agent can be on the cell
                 if cell is None or cell.can_overlap():
-                    rebound_options.append(cand)
+                    rebound_slip_options.append(candidate)
             
             # choose from valid candidates or keep current position if empty
-            if len(rebound_options) > 0:
-                index = self.np_random.choice(len(rebound_options))
-                self.agent_pos = rebound_options[index]
+            if len(rebound_slip_options) > 0:
+                index = self.np_random.choice(len(rebound_slip_options))
+                self.agent_pos = rebound_slip_options[index]
 
-                # make sure to still check for collisions
+                # Reassign next cell to make sure to still check for collisions
                 next_cell = self.grid.get(*self.agent_pos)
                 # TODO check if this leads to new bugs
 
+        # check for cells and corresponding rewards / episode end
         if next_cell != None and next_cell.type == 'goal':
             if self.reward_spec[ABSORBING_STATES]:
                 reward += self.reward_spec[ABSORBING_REWARD_GOAL]
@@ -343,6 +351,7 @@ class RiskyPathEnv(MiniGridEnv):
         """Override render method to not highlight cells by default.
         Highlighted cells might confuse users as they suggest that the agent
         does not have full observability over the environment."""
+
         return super().render(
             mode=mode,
             close=close,
@@ -352,6 +361,7 @@ class RiskyPathEnv(MiniGridEnv):
 
 
 # -------* Registration *-------
+
 # ---- V0 ----
 class RiskyPathV0(MiniGridRiskyPathEnv):
     def __init__(self):
@@ -405,10 +415,10 @@ register(
 )
 
 # ---- V4 ----
-# Wall rebound activated with agent directionality
+# Wall rebound & slipping activated with agent directionality
 class RiskyPathV4(RiskyPathEnv):
     def __init__(self):
-        super().__init__(show_agent_dir=True, wall_rebound=True)
+        super().__init__(show_agent_dir=True, wall_rebound=True, slip_proba=0.2)
 
 register(
     id="MiniGrid-RiskyPath-v4",
