@@ -90,7 +90,7 @@ GOAL_REWARD = "goal_reward"
 ABSORBING_STATES = "absorbing_states"
 ABSORBING_REWARD_GOAL = "absorbing_reward_goal"
 ABSORBING_REWARD_LAVA = "absorbing_reward_lava"
-RISKY_TILE_REWARD = "risky_tile_reward"
+SPIKY_TILE_REWARD = "risky_tile_reward"
 LAVA_REWARD = "lava_reward"
 
 # Reward specification Dictionary will be passed to the environment
@@ -100,7 +100,7 @@ DEFAULT_REWARDS = {
     ABSORBING_STATES : False,
     ABSORBING_REWARD_GOAL : 0,
     ABSORBING_REWARD_LAVA : -1,
-    RISKY_TILE_REWARD : 0,
+    SPIKY_TILE_REWARD : 0,
     LAVA_REWARD : -1
 }
 
@@ -124,6 +124,7 @@ class RiskyPathEnv(MiniGridEnv):
         agent_start_pos=(2,9),
         goal_positions=[(1,3)],
         lava_positions=None,
+        spiky_active=True,
         spiky_positions=None,
         reward_spec=DEFAULT_REWARDS,
         slip_proba=0.,
@@ -156,7 +157,7 @@ class RiskyPathEnv(MiniGridEnv):
         assert agent_start_pos not in temp_lava_positions, \
             "Agent in lava position"
 
-        if spiky_positions is None:
+        if spiky_active and spiky_positions is None:
             # generate default spiky positions relative to bottom left corner
             # (goal is ignored due to order of tile placement)
             temp_spiky_positions = []
@@ -164,6 +165,9 @@ class RiskyPathEnv(MiniGridEnv):
                 temp_spiky_positions.append((2, y))
         else:
             temp_spiky_positions = spiky_positions
+        
+        assert reward_spec[SPIKY_TILE_REWARD] == 0 or spiky_active, \
+            "Set the spiky tile reward to 0 if spiky tiles are not activated"
 
         # Define instance variables not yet contained in MiniGridEnv
         # These variables don't need to be reset when resetting the env
@@ -173,6 +177,7 @@ class RiskyPathEnv(MiniGridEnv):
         self.reward_spec = reward_spec
         self.goal_positions = goal_positions
         self.lava_positions = temp_lava_positions
+        self.spiky_active = spiky_active
         self.spiky_positions = temp_spiky_positions
         self.new_actions = RiskyPathEnv.Actions
         self.show_agent_dir = show_agent_dir
@@ -221,8 +226,9 @@ class RiskyPathEnv(MiniGridEnv):
             self.put_obj(Lava(), *pos)
 
         # place the spiky tiles (relative to bottom left corner)
-        for pos in self.spiky_positions:
-            self.put_obj(SpikyTile(), *pos)
+        if self.spiky_active:
+            for pos in self.spiky_positions:
+                self.put_obj(SpikyTile(), *pos)
 
         # place the goal tile(s) last to override any other tile
         for pos in self.goal_positions:
@@ -331,7 +337,7 @@ class RiskyPathEnv(MiniGridEnv):
                 done = True
                 reward += self.reward_spec[LAVA_REWARD]
         if next_cell != None and next_cell.type == 'spiky_floor':
-            reward += self.reward_spec[RISKY_TILE_REWARD]
+            reward += self.reward_spec[SPIKY_TILE_REWARD]
 
         # finish the step
         if self.step_count >= self.max_steps:
@@ -369,6 +375,51 @@ class RiskyPathEnv(MiniGridEnv):
         return self.grid.get(*self.agent_pos) is None \
             or not self.grid.get(*self.agent_pos).type in ['goal', 'lava']
 
+    @property
+    def _tensor_observation_space(self):
+        """Returns the observation space of the environment for tensor
+        observations and the array shape.
+        The space dimensionality is dependent on whether or not spiky
+        tiles are used."""
+        if self.spiky_active:
+            # for each position, 5 dimensions (agent, wall, lava, goal, spiky)
+            # normal floor tile is implicit
+            shape = (self.grid.width, self.grid.height, 5)
+        else:
+            # reduce dimension by 1 (no spiky tiles)
+            shape = (self.grid.width, self.grid.height, 4)
+        return spaces.Box(low=0, high=1, shape=shape, dtype=int), shape
+
+    def tensor_obs(self):
+        """Returns a (full) tensor observation of the environment.
+        The tensor is computed dependent on the reward specification:
+        when there is no specified reward/penalty for spiky tiles, they
+        are not considered in the computation of the tensor.
+        """
+        obs_shape = self._tensor_observation_space[1]
+        tensor_obs = np.zeros(obs_shape, dtype=int)
+        # 0 is agent position
+        # 1 is wall positions
+        # 2 is lava positions
+        # 3 is goal positions
+        # (4 is spiky floor position)
+        agent_x, agent_y = self.agent_pos
+        tensor_obs[agent_x, agent_y, 0] = 1
+
+        for x in range(self.grid.width):
+            for y in range(self.grid.height):
+                current_cell = self.grid.get(x, y)
+                if current_cell is not None:
+                    if current_cell.type == "wall":
+                        tensor_obs[x, y, 1] = 1
+                    elif current_cell.type == "lava":
+                        tensor_obs[x, y, 2] = 1
+                    elif current_cell.type == "goal":
+                        tensor_obs[x, y, 3] = 1
+                    # next block only executes if spiky tiles have been set
+                    elif current_cell.type == "spiky_floor":
+                        tensor_obs[x, y, 4] = 1
+        return tensor_obs
 
 # -------* Registration *-------
 
@@ -394,10 +445,10 @@ register(
 )
 
 # ---- V2 ----
-# Default environment specification without agent directionality
+# Default environment specification without agent directionality or spiky tiles
 class RiskyPathV2(RiskyPathEnv):
     def __init__(self):
-        super().__init__(show_agent_dir=False)
+        super().__init__(show_agent_dir=False, spiky_active=False)
 
 register(
     id="MiniGrid-RiskyPath-v2",
@@ -406,18 +457,19 @@ register(
 
 # ---- V3 ----
 # spiky penality activated with -0.1
-rs = {
+rs_1 = {
         STEP_PENALTY : 0,
         GOAL_REWARD : 1,
         ABSORBING_STATES : False,
         ABSORBING_REWARD_GOAL : 0,
-        RISKY_TILE_REWARD : -0.1,
+        ABSORBING_REWARD_LAVA : 0,
+        SPIKY_TILE_REWARD : -0.1,
         LAVA_REWARD : -1
 }
 
 class RiskyPathV3(RiskyPathEnv):
     def __init__(self):
-        super().__init__(show_agent_dir=False, reward_spec=rs)
+        super().__init__(show_agent_dir=False, reward_spec=rs_1)
 
 register(
     id="MiniGrid-RiskyPath-v3",
@@ -443,7 +495,7 @@ rs = {
         ABSORBING_STATES : True,
         ABSORBING_REWARD_GOAL : 2,
         ABSORBING_REWARD_LAVA: -2,
-        RISKY_TILE_REWARD : 0,
+        SPIKY_TILE_REWARD : 0,
         LAVA_REWARD : -1
 }
 
