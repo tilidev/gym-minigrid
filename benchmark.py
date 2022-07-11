@@ -30,7 +30,7 @@ reset_time = (1000 * dt) / args.num_resets
 # Benchmark rendering
 t0 = time.time()
 for i in range(args.num_frames):
-    env.render('rgb_array')
+    env.render('rgb_array', tile_size=16)
 t1 = time.time()
 dt = t1 - t0
 frames_per_sec = args.num_frames / dt

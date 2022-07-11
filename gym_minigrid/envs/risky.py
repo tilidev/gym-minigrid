@@ -211,8 +211,6 @@ class RiskyPathEnv(MiniGridEnv):
         # TODO Check whether or not this affects other parts of the code
         self.action_space = spaces.Discrete(len(RiskyPathEnv.Actions))
 
-        # TODO Check whether or not it is possible to easily change the observation space
-
         # create an empty grid
         self.grid = Grid(width, height)
         if not self.show_agent_dir:
@@ -321,7 +319,6 @@ class RiskyPathEnv(MiniGridEnv):
 
         # reassign next cell to make sure to check for collisions & rewards
         next_cell = self.grid.get(*self.agent_pos)
-        # TODO check if this leads to new bugs
         
         # check for cells and corresponding rewards / episode end
         if next_cell != None and next_cell.type == 'goal':
@@ -342,15 +339,6 @@ class RiskyPathEnv(MiniGridEnv):
         # finish the step
         if self.step_count >= self.max_steps:
             done = True
-
-        # return observations as images
-        # only a temporary solution! This does not conform to the env obs spec
-        # TODO Adapt observation_space or observation without breaking other code
-        # img_obs = self.grid.render(
-        #     16,
-        #     self.agent_pos,
-        #     self.agent_dir
-        # )
 
         obs = self.gen_obs()
 
@@ -506,4 +494,13 @@ class RiskyPathV5(RiskyPathEnv):
 register(
     id="MiniGrid-RiskyPath-v5",
     entry_point='gym_minigrid.envs:RiskyPathV5'
+)
+
+class RiskyPathV6(RiskyPathEnv):
+    def __init__(self):
+        super().__init__(show_agent_dir=True, spiky_active=False, wall_rebound=True)
+
+register(
+    id="MiniGrid-RiskyPath-v6",
+    entry_point='gym_minigrid.envs:RiskyPathV6'
 )
