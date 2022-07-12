@@ -1,86 +1,6 @@
 from gym_minigrid.minigrid import *
 from gym_minigrid.register import register
 
-# Test Environment with basic functionality (Not relevant for thesis)
-# TODO remove later if not used
-class MiniGridRiskyPathEnv(MiniGridEnv):
-    """
-    Single-room square grid environment with holes (/lava) and slipping factor
-    """
-
-    def __init__(
-        self,
-        width=11,
-        height=11,
-        agent_start_pos=(2,9),
-        agent_is_directional=True,
-        agent_start_direction=None,
-        slip_proba=0.,
-        goal_positions=[(1,3)],
-        max_steps=150,
-        seed=1337,
-        agent_view_size=7
-    ):
-        # basic sanity checks
-        assert width >= 6 and height >= 6
-        if not agent_is_directional:
-            assert agent_start_direction is None, \
-                "Directionality of Agent must explicitly be set to True"
-        elif agent_start_direction is None:
-            agent_start_direction = 3 # make agent face up
-        assert slip_proba >= 0 and slip_proba < 1, \
-            "Slipping probability of agent can only be between 0 and 1"
-        assert agent_start_pos is not None
-
-        self.agent_start_pos = agent_start_pos
-
-        self.goal_positions = goal_positions
-
-        self.agent_start_direction = agent_start_direction
-
-        super().__init__(width=width, height=height, max_steps=max_steps, seed=seed, agent_view_size=agent_view_size)
-
-    
-    def _gen_grid(self, width, height):
-        # TODO subclass Grid & set grid kind dependent on agent directionality
-        # TODO code should be agnostic for different grid kinds
-
-        # -----------------
-        # MiniGrid version:
-        self.grid = Grid(width, height)
-
-        # surround inner grid with walls
-        self.grid.wall_rect(0, 0, width, height)
-
-        # add goal position(s)
-        for position in self.goal_positions:
-            self.put_obj(Goal(), *position)
-
-        # holes/lava on the left and goal
-        for y in range(1, height - 1):
-            if y != 3:
-                self.put_obj(Lava(), 1, y)
-
-        # holes/lava in the middle
-        for y in range(4, height - 2):
-            self.put_obj(Lava(), 3, y)
-        
-        # two holes/lava on the right
-        self.put_obj(Lava(), 6, 5)
-        self.put_obj(Lava(), 6, 6)
-
-        # place agent in grid
-        # TODO remove obligatory agent direction
-        self.agent_pos = self.agent_start_pos
-        self.agent_dir = self.agent_start_direction
-
-        self.mission = "get to the green goal square"
-    
-    def _reward(self):
-        """Reward given upon reaching the goal"""
-        return 1
-
-
 # ----------------------------------------
 # Rewrite of some major aspects of Gym-Minigrid for correect env specification
 
@@ -364,7 +284,7 @@ class RiskyPathEnv(MiniGridEnv):
             or not self.grid.get(*self.agent_pos).type in ['goal', 'lava']
 
     @property
-    def _tensor_observation_space(self):
+    def tensor_observation_space(self):
         """Returns the observation space of the environment for tensor
         observations and the array shape.
         The space dimensionality is dependent on whether or not spiky
@@ -384,7 +304,7 @@ class RiskyPathEnv(MiniGridEnv):
         when there is no specified reward/penalty for spiky tiles, they
         are not considered in the computation of the tensor.
         """
-        obs_shape = self._tensor_observation_space[1]
+        obs_shape = self.tensor_observation_space[1]
         tensor_obs = np.zeros(obs_shape, dtype=int)
         # 0 is agent position
         # 1 is wall positions
@@ -410,16 +330,6 @@ class RiskyPathEnv(MiniGridEnv):
         return tensor_obs
 
 # -------* Registration *-------
-
-# ---- V0 ----
-class RiskyPathV0(MiniGridRiskyPathEnv):
-    def __init__(self):
-        super().__init__()
-
-register(
-    id='MiniGrid-RiskyPath-v0',
-    entry_point='gym_minigrid.envs:RiskyPathV0'
-)
 
 # ---- V1 ----
 # Default environment specification
@@ -498,7 +408,7 @@ register(
 
 class RiskyPathV6(RiskyPathEnv):
     def __init__(self):
-        super().__init__(show_agent_dir=True, spiky_active=False, wall_rebound=True)
+        super().__init__(show_agent_dir=True, spiky_active=True, wall_rebound=True)
 
 register(
     id="MiniGrid-RiskyPath-v6",

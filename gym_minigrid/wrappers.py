@@ -5,6 +5,8 @@ from functools import reduce
 import numpy as np
 import gym
 from gym import error, spaces, utils
+
+from gym_minigrid.envs.risky import RiskyPathEnv
 from .minigrid import OBJECT_TO_IDX, COLOR_TO_IDX, STATE_TO_IDX, Goal
 
 class ReseedWrapper(gym.core.Wrapper):
@@ -381,3 +383,25 @@ class SymbolicObsWrapper(gym.core.ObservationWrapper):
         grid = np.transpose(grid, (1, 2, 0))
         obs['image'] = grid
         return obs
+
+class TensorObsWrapper(gym.core.Wrapper):
+    """Fully observable tensor representation of the RiskyPath environment.
+    The dimensionality is dependent on the activation of risky tiles."""
+    def __init__(self, env) -> None:
+        super().__init__(env)
+        assert isinstance(env.unwrapped, RiskyPathEnv), \
+            "This Wrapper expects a RiskyPath environment"
+        
+        self._observation_space = env.tensor_observation_space[0]
+    
+    def reset(self):
+        # TODO check if it works
+        self.env.reset()
+        return self.env.tensor_obs()
+
+    def step(self, action):
+        # TODO check if it works
+        _, reward, done, info = self.env.step(action)
+        return self.env.tensor_obs(), reward, done, info
+
+# TODO check if Image wrapper does what I want
