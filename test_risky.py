@@ -7,11 +7,11 @@ import gym_minigrid
 from PIL import Image
 from gym_minigrid.envs.risky import RiskyPathEnv
 from gym_minigrid.minigrid import TILE_PIXELS
-from gym_minigrid.wrappers import TensorObsWrapper
+from gym_minigrid.wrappers import ImgObsWrapper, RGBImgObsWrapper, TensorObsWrapper
 
 def run_normal():
     # TODO change method name
-    env = gym.make("MiniGrid-RiskyPath-v2")
+    env = gym.make("MiniGrid-RiskyPath-v0", show_agent_dir=False, spiky_active=False)
 
     obs = env.reset()
 
@@ -41,7 +41,7 @@ def run_normal():
             print("reset environment\n")
 
 def test_tensor_obs():
-    env: RiskyPathEnv = gym.make("MiniGrid-RiskyPath-v6")
+    env: RiskyPathEnv = gym.make("MiniGrid-RiskyPath-v0")
     if env.spiky_active:
         expected_shape = (11, 11, 5)
     else:
@@ -67,12 +67,32 @@ def test_tensor_obs():
     assert obs.shape == expected_shape
 
 def test_full_rgb_obs():
-    pass
+    env = gym.make("MiniGrid-RiskyPath-v0")
+    env = RGBImgObsWrapper(env, tile_size=32)
+    env = ImgObsWrapper(env)
+    # NOTE This is the setup to use when applying DRL algorithms with SB3
+
+    num_episodes = 5
+
+    for ep in range(num_episodes):
+        obs = env.reset()
+
+        done = False
+        cur_step = 0
+
+        while not done:
+            action = env.action_space.sample()
+            obs, reward, done, _ = env.step(action)
+            cur_step += 1
+        
+    img = Image.fromarray(obs)
+    img.show()
+
 
 # img = Image.fromarray(obs)
 # img.show("Observation of time step 12 as an rgb-image")
 
 if __name__ == "__main__":
-    test_tensor_obs()
+    # test_tensor_obs()
     # run_normal()
-    # test_full_rgb_obs()
+    test_full_rgb_obs()

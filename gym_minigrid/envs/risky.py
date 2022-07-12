@@ -25,10 +25,7 @@ DEFAULT_REWARDS = {
 }
 
 class RiskyPathEnv(MiniGridEnv):
-    """
-    Single-room square grid environment with holes (/lava) and slipping factor
-    """
-
+    
     # Only actions needed are Move {west, north, east, south}
     class Actions(IntEnum):
         west = 0
@@ -40,11 +37,11 @@ class RiskyPathEnv(MiniGridEnv):
         self,
         width=11,
         height=11,
-        show_agent_dir=True,
+        show_agent_dir=False,
         agent_start_pos=(2,9),
         goal_positions=[(1,3)],
         lava_positions=None,
-        spiky_active=True,
+        spiky_active=False,
         spiky_positions=None,
         reward_spec=DEFAULT_REWARDS,
         slip_proba=0.,
@@ -52,6 +49,25 @@ class RiskyPathEnv(MiniGridEnv):
         max_steps=150,
         seed=1337,
     ):
+        """Initialize a room surrounded by walls with lava holes and a 
+        goal position.
+
+        Args:
+            width (int): width of the grid including walls.
+            height (int): height of the grid incl. walls.
+            show_agent_dir (bool): defines if agent direction is rendered.
+            agent_start_pos (tuple): .
+            goal_positions (list): List of goal positions.
+            lava_positions (list, optional): List of lava positions.
+            spiky_active (bool): Whether or not to activate/render spiky_tiles.
+            spiky_positions (list, optional): list of spiky_tile positions.
+            reward_spec (dict): Defines the reward design.
+            slip_proba (float): The probability of agent slipping.
+            wall_rebound (bool): Whether walking into walls leads to rebound.
+            max_steps (int): max number of steps per episode.
+            seed (int): The seed for the environment's RNG.
+        """
+
         # Basic sanity checks
         assert width >= 6 and height >= 6
         assert reward_spec.keys() == DEFAULT_REWARDS.keys()
@@ -161,14 +177,23 @@ class RiskyPathEnv(MiniGridEnv):
         self.mission = "Get to the green Goal tile"
 
     def step(self, action):
-        """Overrides MiniGridEnv.step() as MiniGridEnv logic is not sufficient
+        """Overrides MiniGridEnv.step()
+
+        Overrides MiniGridEnv.step() as MiniGridEnv logic is not sufficient
         for this environment (Non-directional agent,
         non-sparse reward option). Under the hood, this method first changes
         the orientation of the agent similar to MiniGridEnv, except that the
         time step is not finished directly afterwards. The agent will move
         forward in the new direction if this is possible. The collisions with
         objects is still specified as in the default MiniGridEnv
-        implementation."""
+        implementation.
+
+        Args:
+            action: Should be contained in self.action_space
+
+        Returns:
+            (observation, reward, done, info)
+        """         
 
         self.step_count += 1
         reward = self.reward_spec[STEP_PENALTY]
@@ -300,9 +325,13 @@ class RiskyPathEnv(MiniGridEnv):
 
     def tensor_obs(self):
         """Returns a (full) tensor observation of the environment.
+
         The tensor is computed dependent on the reward specification:
         when there is no specified reward/penalty for spiky tiles, they
         are not considered in the computation of the tensor.
+
+        Returns:
+            NDArray: environment's tensor observation
         """
         obs_shape = self.tensor_observation_space[1]
         tensor_obs = np.zeros(obs_shape, dtype=int)
@@ -331,86 +360,9 @@ class RiskyPathEnv(MiniGridEnv):
 
 # -------* Registration *-------
 
-# ---- V1 ----
-# Default environment specification
-class RiskyPathV1(RiskyPathEnv):
-    def __init__(self):
-        super().__init__()
-
+# ---- V0 ----
+# Default environment specification - tensor observation
 register(
-    id="MiniGrid-RiskyPath-v1",
-    entry_point='gym_minigrid.envs:RiskyPathV1'
-)
-
-# ---- V2 ----
-# Default environment specification without agent directionality or spiky tiles
-class RiskyPathV2(RiskyPathEnv):
-    def __init__(self):
-        super().__init__(show_agent_dir=False, spiky_active=False)
-
-register(
-    id="MiniGrid-RiskyPath-v2",
-    entry_point='gym_minigrid.envs:RiskyPathV2'
-)
-
-# ---- V3 ----
-# spiky penality activated with -0.1
-rs_1 = {
-        STEP_PENALTY : 0,
-        GOAL_REWARD : 1,
-        ABSORBING_STATES : False,
-        ABSORBING_REWARD_GOAL : 0,
-        ABSORBING_REWARD_LAVA : 0,
-        SPIKY_TILE_REWARD : -0.1,
-        LAVA_REWARD : -1
-}
-
-class RiskyPathV3(RiskyPathEnv):
-    def __init__(self):
-        super().__init__(show_agent_dir=False, reward_spec=rs_1)
-
-register(
-    id="MiniGrid-RiskyPath-v3",
-    entry_point='gym_minigrid.envs:RiskyPathV3'
-)
-
-# ---- V4 ----
-# Wall rebound & slipping activated with agent directionality
-class RiskyPathV4(RiskyPathEnv):
-    def __init__(self):
-        super().__init__(show_agent_dir=True, wall_rebound=True, slip_proba=0.2)
-
-register(
-    id="MiniGrid-RiskyPath-v4",
-    entry_point='gym_minigrid.envs:RiskyPathV4'
-)
-
-# ---- V5 ----
-# absorbing final states
-rs = {
-        STEP_PENALTY : 0,
-        GOAL_REWARD : 1,
-        ABSORBING_STATES : True,
-        ABSORBING_REWARD_GOAL : 2,
-        ABSORBING_REWARD_LAVA: -2,
-        SPIKY_TILE_REWARD : 0,
-        LAVA_REWARD : -1
-}
-
-class RiskyPathV5(RiskyPathEnv):
-    def __init__(self):
-        super().__init__(show_agent_dir=False, reward_spec=rs)
-
-register(
-    id="MiniGrid-RiskyPath-v5",
-    entry_point='gym_minigrid.envs:RiskyPathV5'
-)
-
-class RiskyPathV6(RiskyPathEnv):
-    def __init__(self):
-        super().__init__(show_agent_dir=True, spiky_active=True, wall_rebound=True)
-
-register(
-    id="MiniGrid-RiskyPath-v6",
-    entry_point='gym_minigrid.envs:RiskyPathV6'
+    id="MiniGrid-RiskyPath-v0",
+    entry_point='gym_minigrid.envs:RiskyPathEnv'
 )
