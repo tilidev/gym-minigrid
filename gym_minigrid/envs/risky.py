@@ -2,7 +2,7 @@ from gym_minigrid.minigrid import *
 from gym_minigrid.register import register
 
 # ----------------------------------------
-# Rewrite of some major aspects of Gym-Minigrid for correect env specification
+# Rewrite of some aspects of Gym-Minigrid for correect env specification
 
 # String Constants for reward specification
 STEP_PENALTY = "step_penalty"
@@ -144,7 +144,6 @@ class RiskyPathEnv(MiniGridEnv):
         environment specification (only 4 distinct actions), this workaround is
         used."""
         # Workaround for correctly specifying the action_space attribute
-        # TODO Check whether or not this affects other parts of the code
         self.action_space = spaces.Discrete(len(RiskyPathEnv.Actions))
 
         # create an empty grid
@@ -169,7 +168,6 @@ class RiskyPathEnv(MiniGridEnv):
             self.put_obj(Goal(), *pos)
 
         # place the agent looking up
-        # TODO make sure agent_direction makes no difference
         self.agent_pos = self.agent_start_pos
         self.agent_dir = 3
 
@@ -198,6 +196,8 @@ class RiskyPathEnv(MiniGridEnv):
         self.step_count += 1
         reward = self.reward_spec[STEP_PENALTY]
         done = False
+
+        previous_position = self.agent_pos
 
         # Only apply movement logic if agent should be able to move
         if self.can_move:
@@ -287,7 +287,17 @@ class RiskyPathEnv(MiniGridEnv):
 
         obs = self.gen_obs()
 
-        return obs, reward, done, {} # TODO change information
+        info = {
+            "agent_pos" : self.agent_pos,
+            "previous_pos" : previous_position,
+            "actual_movement_vec" : self.agent_pos - previous_position,
+            "intended_movement_vec" : DIR_TO_VEC[self.agent_dir],
+            "slipped" : slip_now,
+            "current_cell_type" : next_cell.type \
+                if next_cell is not None else None
+        }
+
+        return obs, reward, done, info
 
     def render(self, mode='human', close=False, highlight=False, tile_size=...):
         """Override render method to not highlight cells by default.

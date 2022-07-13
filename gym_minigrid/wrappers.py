@@ -395,13 +395,9 @@ class TensorObsWrapper(gym.core.Wrapper):
         self._observation_space = env.tensor_observation_space[0]
     
     def reset(self):
-        # TODO check if it works
         self.env.reset()
         return self.env.tensor_obs()
 
     def step(self, action):
-        # TODO check if it works
         _, reward, done, info = self.env.step(action)
         return self.env.tensor_obs(), reward, done, info
-
-# TODO check if Image wrapper does what I want
