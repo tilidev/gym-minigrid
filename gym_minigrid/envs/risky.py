@@ -108,7 +108,7 @@ class RiskyPathEnv(MiniGridEnv):
         # Define instance variables not yet contained in MiniGridEnv
         # These variables don't need to be reset when resetting the env
         # The default MiniGridEnv.reset() can thus be used
-        self.agent_start_pos = agent_start_pos
+        self.agent_start_pos = np.array(agent_start_pos)
         self.slip_proba = slip_proba
         self.reward_spec = reward_spec
         self.goal_positions = goal_positions
