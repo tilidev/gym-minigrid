@@ -199,6 +199,7 @@ class RiskyPathEnv(MiniGridEnv):
 
         previous_position = self.agent_pos
 
+        slip_now = False
         # Only apply movement logic if agent should be able to move
         if self.can_move:
             # choose new agent direction according to minigrid.DIR_TO_VEC
@@ -222,8 +223,6 @@ class RiskyPathEnv(MiniGridEnv):
             if self.slip_proba > 0:
                 rnd_val = self.np_random.random()  
                 slip_now = rnd_val < self.slip_proba
-            else:
-                slip_now = False
 
             # move one step and get the reward
 
