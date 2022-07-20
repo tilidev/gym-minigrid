@@ -264,9 +264,12 @@ class RiskyPathEnv(MiniGridEnv):
 
         # reassign next cell to make sure to check for collisions & rewards
         next_cell = self.grid.get(*self.agent_pos)
+
+        is_success = False
         
         # check for cells and corresponding rewards / episode end
         if next_cell != None and next_cell.type == 'goal':
+            is_success = True
             if self.reward_spec[ABSORBING_STATES]:
                 reward += self.reward_spec[ABSORBING_REWARD_GOAL]
             else:
@@ -294,7 +297,8 @@ class RiskyPathEnv(MiniGridEnv):
             "intended_movement_vec" : DIR_TO_VEC[self.agent_dir],
             "slipped" : slip_now,
             "current_cell_type" : next_cell.type \
-                if next_cell is not None else None
+                if next_cell is not None else None,
+            "is_success": is_success
         }
 
         return obs, reward, done, info
