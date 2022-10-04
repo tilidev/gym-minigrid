@@ -18,7 +18,7 @@ packages installation:
 
 ```sh
 pip install gym==0.21.0
-conda install matplotlib==3.5.1
+pip install matplotlib==3.5.1
 ```
 
 Numpy is automatically installed with gym, ready to go!
